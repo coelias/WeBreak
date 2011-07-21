@@ -1,0 +1,36 @@
+ __      __      __________                        __    
+/  \    /  \ ____\______   \_______   ____ _____  |  | __
+\   \/\/   // __ \|    |  _/\_  __ \_/ __ \\__  \ |  |/ /
+ \        /\  ___/|    |   \ |  | \/\  ___/ / __ \|    < 
+  \__/\  /  \___  >______  / |__|    \___  >____  /__|_ \    Beta(0.2)
+       \/       \/       \/              \/     \/     \/    
+======================================================================
+
+WeBreak aims to be a web application bruteforcer, making a strong effort 
+in usability, fexibility and performance.
+
+It must be read as "We Break", that is what we use/like to do :P.
+
+I decided to start this project in order to improve and mix my previous
+security tools (Wfuzz,ProxyStrike, and the first version of WeBreak)
+
+Features
+========
+Console and web based interface
+Fuzzing engine
+Dictionary generator
+Plugins Engine
+Sql injection Plugin
+XSS Plugin
+Passive proxy
+and even more!!!
+
+TODO
+====
+Everything! O_o
+
+Cheers!
+Deepbit
+
+Colaborators:
+Abel Gomez (aka zprian)
