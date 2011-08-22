@@ -1,8 +1,6 @@
 # Covered by GPL v2.0
-# sechttp.py: a Security HTTP protocol abstraction by Carlos del Ojo (deepbit@gmail.com)
+# sechttp.py: a HTTP protocol security abstraction by Carlos del Ojo (deepbit@gmail.com)
 # This module uses httplib2 (http://code.google.com/p/httplib2/) and can be used with with pyCurl (http://pycurl.sourceforge.net/)
-
-#v.0.1
 
 import re
 import sys
@@ -22,7 +20,7 @@ else:
 HTTPCODES={ '100':"Continue", '101':"Switching Protocols", '200':"OK", '201':"Created", '202':"Accepted", '203':"Non-Authoritative Information", '204':"No Content", '205':"Reset Content", '206':"Partial Content", '300':"Multiple Choices", '301':"Moved Permanently", '302':"Found", '303':"See Other", '304':"Not Modified", '305':"Use Proxy", '306':"(Unused)", '307':"Temporary Redirect", '400':"Bad Request", '401':"Unauthorized", '402':"Payment Required", '403':"Forbidden", '404':"Not Found", '405':"Method Not Allowed", '406':"Not Acceptable", '407':"Proxy Authentication Required", '408':"Request Timeout", '409':"Conflict", '410':"Gone", '411':"Length Required", '412':"Precondition Failed", '413':"Request Entity Too Large", '414':"Request-URI Too Long", '415':"Unsupported Media Type", '416':"Requested Range Not Satisfiable", '417':"Expectation Failed", '500':"Internal Server Error", '501':"Not Implemented", '502':"Bad Gateway", '503':"Service Unavailable", '504':"Gateway Timeout", '505':"HTTP Version Not Supported"}
 
 class HttpCMgr:
-	'''Connection Manager'''
+	'''Connection Manager: Used by any HttpReq Object in order to create http connections. It's a wrapper of any other HTTP engine, like PyCurl, Httplib2, Requests, or any other'''
 	class Connection:
 		# Every Connection has a request function wich returns a rawresponse in order to be parsed
 		def __init__(self):
@@ -68,6 +66,7 @@ class HttpCMgr:
 			return rawResponse
 			
 	def __init__(self,threads=1,proxyinfo=None):
+		'''You can provide the number of threads to use and an optional Proxy'''
 		assert threads>0
 		self.ConnSem=threading.Semaphore()
 		self.__Connections=[]
@@ -145,6 +144,7 @@ class HttpCMgr:
 		self.__getConnection()  # When a worker finishes, It removes a connection from the connection list
 
 	def setThreads(self,threads):
+		'''If you want to change the number of threads while running, this function lets you increase or decrease the amount of threads.'''
 		assert threads>0
 		if threads>self.__Threads:
 			self.__createWorkers(threads-self.__Threads)        # Increase workers
@@ -172,6 +172,7 @@ class HttpCMgr:
 		self.__MultiQueue.put(task)
 
 	def waitMulti(self):
+		'''Used to wait until all threads finish to process all the requests.'''
 		self.__MultiQueue.join()
 			
 
@@ -195,41 +196,50 @@ HttpQueryVarsFormats=[(re.compile("([^?=&]+)(?:=([^&]*))?"),"=")]
 HttpPathVarsFormats=[(re.compile("([^/~]+)~([^/]+)"),"~"),
 					(re.compile("([^/=]+)=([^/]+)"),"=")
 					]
-HttpHeadersVarsFormats=[(re.compile("([^;,:]+)=([^=:,;]+)[:,;]"),"=")]
+HttpHeadersVarsFormats=[(re.compile("([^;,: ]+)=([^=:,;]+)"),"=")]
 
 class Variable:
-	'''Variable Object wich can recover its initial value and add some metadata'''
+	'''Variable Object wich can be modified and recovered.'''
 	def __init__(self,name,value="",eq="=",extraInfo=""):
 		if value==None:
 			value=""
+		#: Variable name (or key)
 		self.name=name
+		#: Variable value
 		self.value=value
-		self.initValue=value
-		self.extraInfo=extraInfo
-		self.eq=eq
+		self.__initValue=value
+		self.__extraInfo=extraInfo
+		self.__eq=eq
 	
-	def copy(self):
-		nv= Variable(self.name,self.initValue,self.eq,self.extraInfo)
-		nv.update(self.value)
-		return nv
-
-	def restore(self):
-		self.value=self.initValue
-
-	def change(self,newval):
-		self.initValue=self.value=newval
-
 	def update(self,val):
+		'''Change the variable value.'''
 		self.value=val
 
 	def append(self,val):
+		'''Appends information to the variable value'''
 		self.value+=val
 
+	def restore(self):
+		'''Restores the variable to the first value assigned.'''
+		self.value=self.__initValue
+
+	def copy(self):
+		'''Copies the current variable and returns a new variable with the same information.'''
+		nv= Variable(self.name,self.__initValue,self.__eq,self.__extraInfo)
+		nv.update(self.value)
+		return nv
+
+	def change(self,newval):
+		'''Permanent change of the value, overwriting the initial value.'''
+		self.__initValue=self.value=newval
+
 	def info(self):
+		'''String representation of the variable -> [ %s : %s ]'''
 		return "[ %s : %s ]" % (self.name,self.value)
 	
 	def __str__(self):
-		return "".join([self.name,self.eq,self.value])
+		'''Raw representation of the variable '''
+		return "".join([self.name,self.__eq,self.value])
 
 class httpInfoBlock:
 	def __init__(self):
@@ -345,7 +355,7 @@ class httpHeaders():
 	def __str__(self):
 		cad=""
 		for i in self.headers:
-			cad.append("{0}: {1}\r\n".format(i,self[i]))
+			cad+="{0}: {1}\r\n".format(i,self[i])
 		return cad
 	
 	def __iter__(self):
@@ -363,23 +373,34 @@ class httpHeaders():
 				vars+=i.getVars()
 		return vars
 
-class HttpReq():
+class HttpReq:
+	'''Http request Object, it uses a Connection Manager by default with only one thread and no proxy.
+	
+Attributes:
+	* urlWithoutVariables
+	* pathWithVariables
+	* completeUrl
+	* urlWithoutPath
+	* path
+	* response 
+'''
+	
+	DEFAULTCMGR=HttpCMgr()
+
 	def __init__(self,CMGR=None):
 		if not CMGR:
-			CMGR=HttpCMgr()
+			CMGR=HttpReq.DEFAULTCMGR
 		self.__METHOD="GET"
 		self.CMGR=CMGR
 
 		self.headers=httpHeaders()
+		self.response=None
 
 		self.__followLocation=2
 		self.__timeout=None
 		self.__totaltimeout=None
 		self.__auth=None
 		self.__postdata=httpInfoBlock()
-
-	def getVars(self):
-		return self.url.getVars()+self.__postdata.getVars()+self.headers.getVars()
 
 
 	def __getattr__ (self,name):
@@ -409,39 +430,51 @@ class HttpReq():
 
 	################################## METHODS ######################################
 
+	def setUrl (self, urltmp):
+		'''Set the URL you want to make the request'''
+		self.url=httpUrl(urltmp)
+
 	def setPostData(self,data):
+		'''Add Post data to the request'''
 		self.__METHOD="POST"
 		self.__postdata.makeVars(data,HttpQueryVarsFormats)
 
-	def setUrl (self, urltmp):
-		self.url=httpUrl(urltmp)
+	def getVars(self):
+		'''Returns all detected variables inside the request in a list of sechttp.Variable Objects'''
+		return self.url.getVars()+self.__postdata.getVars()+self.headers.getVars()
+
 
 	#----------------------------------- Location --------------------------------------#
 	def setRedirect(self,value):
+		'''Set the number on redirections to follow and avoiding an infinite loop (2 by default)'''
 		self.__followLocation=value
 
 	#----------------------------------- Auth --------------------------------------#
 	def setAuth (self,user,passwd,domain=""):
+		'''Set user password and an optional domain for authentication'''
 		self.__auth=(user,passwd,domain)
 
 	def getAuth (self):
-		return self.__authMethod, self.__userpass
+		'''returns the authentication provided in a tuple (u,p,d)'''
+		return self.__auth
 
 
 	#----------------------------------- Headers ----------------------------------#
 	def __getitem__(self,key):
+		'''Use [] to get a header'''
 		return self.headers[key]
 
 		self.headers[key]=value
 
 	def __contains__(self,key):
+		'''Use 'in' key to guess if it contains a header'''
 		return key in self.headers
 	
 	################################################################################
 
 	def setMethod(self,met):
-		self.__METHOD=met
-
+		'''Specify the method if you want to use another different from ['POST','GET'] (like 'HEAD' or 'PUT')'''
+		self.__METHOD=met.upper()
 
 	def logReq(self):
 		Semaphore_Mutex.acquire()
@@ -451,7 +484,15 @@ class HttpReq():
 		f.close()
 		Semaphore_Mutex.release()
 
+	def getAll(self):
+		'''Get the RAW request, Heading, headers and body'''
+		cad='''{0} {1} {2}\r\n{3}'''.format(self.__METHOD,self.pathWithVariables,"HTTP/1.1",str(self.headers))
+		if self.__METHOD in ["POST","PUT"]:
+			cad+="\r\n"+self.__postdata.getRaw()
+		return cad
+
 	def perform(self):
+		'''Performs the request, then you can access the response through the response attribute'''
 		global REQLOG
 		if REQLOG:
 			self.logReq()
@@ -459,6 +500,14 @@ class HttpReq():
 		self.CMGR.MakeRequest(self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self)
 
 	def performMulti(self,callback=None,info=None):
+		'''This function is used to perform threaded requests. You can specify a callback function callen when the connection manager finishes the request and additional info tied to the request.
+
+Callback function header: def callbackfunc(req,resp,info,excep):
+	* req: Original request
+	* resp: Response
+	* info: info provided by HttpReq.performMulti()
+	* excep: Exception object if the request failed'''
+
 		global REQLOG
 		if REQLOG:
 			self.logReq()
@@ -467,6 +516,7 @@ class HttpReq():
 
 
 	def parseRequest(self,rawreq,scheme):
+		'''Parse a RAW request in a string and overwrites the current object.'''
 		par=StringIO(rawreq)
 		head=par.readline().strip()
 		headings={}
@@ -489,7 +539,11 @@ class HttpReq():
 
 
 
-class Response(object):
+class Response:
+	'''HTTP Response Object
+	Attributes:
+	* code (status code)
+	* message (status message) '''
 
 	def __init__ (self,protocol="",code="",message=""):
 		self.protocol=protocol         # HTTP/1.1
@@ -501,12 +555,13 @@ class Response(object):
 		self.attrValDic={}
 
 	def copy(self):
+		'''Returns another Response copy'''
 		a=Response()
 		a.parseResponse(self.getAll())
 		return a
 
 	def getMd5(self):
-		'''return md5 of the http response content'''
+		'''Returns md5 of the http response content (html or whatever)'''
 		m = hashlib.md5()
 		if VERSION<30:
 			m.update(self.__content)
@@ -515,7 +570,7 @@ class Response(object):
 		return m.hexdigest()
 
 	def getLengthWords(self):
-		'''return Length and words'''
+		'''Returns Length and words in a tuple (l,w)'''
 		return len(self.__content),self.__content.count(" ")
 
 	def addHeader (self,key,value):
@@ -528,12 +583,14 @@ class Response(object):
 				self.__headers.remove(i)
 
 	def __getitem__ (self,key):
+		'''Returns a header value or None if it wasn't found'''
 		for i,j in self.__headers:
 			if key.lower()==i.lower():
 				return  j
-		print ("Error al obtener header!!!")
+		return None
 
 	def getCookie (self):
+		'''Returns the Cookie.'''
 		str=[]
 		for i,j in self.__headers:
 			if i.lower()=="set-cookie":
@@ -541,12 +598,14 @@ class Response(object):
 		return  "; ".join(str)
 
 	def has_header (self,key):
+		'''Checks if there is the header key.'''
 		for i,j in self.__headers:
 			if i.lower()==key.lower():
 				return True
 		return False
 	
 	def getLocation (self):
+		'''Gets the Location value if the header was provided.'''
 		for i,j in self.__headers:
 			if i.lower()=="location":
 				return j
@@ -562,16 +621,17 @@ class Response(object):
 		return self.__headers
 
 	def getContent (self):
+		'''Returns the content of the response'''
 		return self.__content
 
 	def getTextHeaders(self):
 		string=str(self.protocol)+" "+str(self.code)+" "+str(self.message)+"\r\n"
 		for i,j in self.__headers:
 			string+=i+": "+j+"\r\n"
-
 		return string
 
 	def getAll (self):
+		'''Returns all the response, including heading and headers'''
 		string=self.getTextHeaders()+"\r\n"+self.getContent()
 		return string
 
@@ -587,6 +647,7 @@ class Response(object):
 		return string
 
 	def parseResponse (self,rawResponse):
+		'''Parses a Raw response from a string and replaces the current object'''
 		
 		par=StringIO(rawResponse)
 
@@ -610,7 +671,3 @@ class Response(object):
 		self.__content=par.read()
 
 		self.delHeader("Transfer-Encoding")
-
-
-
-		
