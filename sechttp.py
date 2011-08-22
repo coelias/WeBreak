@@ -2,6 +2,8 @@
 # sechttp.py: a Security HTTP protocol abstraction by Carlos del Ojo (deepbit@gmail.com)
 # This module uses httplib2 (http://code.google.com/p/httplib2/) and can be used with with pyCurl (http://pycurl.sourceforge.net/)
 
+# v.0.1
+
 import re
 import sys
 import socks
