@@ -1,4 +1,10 @@
 import re
+import globals
+if globals.VERSION<30:
+	inputf=raw_input
+else:
+	inputf=input
+
 
 class data:
 	pass
@@ -10,7 +16,7 @@ class Number(data):
 			cad +=" [{0}]: ".format(default)
 		else:
 			cad+=": "
-		a=raw_input(cad)
+		a=inputf(cad)
 		try:
 			return int(a)
 		except:
@@ -25,7 +31,7 @@ class String(data):
 			cad +=" [{0}]: ".format(default)
 		else:
 			cad+=": "
-		a=raw_input(cad)
+		a=inputf(cad)
 		if not a.strip() and default:
 			return default
 		return a.replace("\r","").replace("\n","")
@@ -43,7 +49,7 @@ class Option(data):
 
 		for i in enumerate(opts,1):
 			print ("{0}: {1}".format(i[0],i[1]))
-		a=raw_input(cad)
+		a=inputf(cad)
 		try:
 			a=int(a)
 			if a not in range(1,len(opts)+1):
@@ -54,15 +60,30 @@ class Option(data):
 				return default
 			raise Exception("Wrong option")
 
+class MultipleChoice(data):
+	@staticmethod
+	def input(opts,cad="Select one or more options (use separated numbers): "):
+		for i in enumerate(opts,1):
+			print ("{0}: {1}".format(i[0],i[1]))
+		a=inputf(cad)
+		try:
+			a=[int(i) for i in re.findall("[0-9]+",a)]
+			for i in a:
+				if i not in range(1,len(opts)+1):
+					raise Exception()
+			return [opts[i-1] for i in a]
+		except:
+			if default:
+				return default
+			raise Exception("Wrong format")
+
 class ListString(data):
 	@staticmethod
 	def input(par,cad="Enter a list of strings (end with empty string) :"):
 		print cad
 		lst=[]
-		a=raw_input().strip()
+		a=inputf().strip()
 		while a:
 			lst.append(a)
-			a=raw_input().strip()
+			a=inputf().strip()
 		return lst
-
-
