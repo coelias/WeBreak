@@ -1,5 +1,4 @@
 import sys
 
-globals.VERSION=sys.version_info
-globals.VERSION=globals.VERSION[0]*10+globals.VERSION[1]
-globals.REQLOG=False
+VERSION=sys.version_info[0]*10+sys.version_info[1]
+REQLOG=False

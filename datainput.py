@@ -39,6 +39,7 @@ class String(data):
 class Option(data):
 	@staticmethod
 	def input(options,cad="Select an option"):
+		print (cad)
 		opts,default=options
 		if default not in opts:
 			raise Exception("Default not in options")
@@ -80,10 +81,23 @@ class MultipleChoice(data):
 class ListString(data):
 	@staticmethod
 	def input(par,cad="Enter a list of strings (end with empty string) :"):
-		print cad
+		print (cad)
 		lst=[]
 		a=inputf().strip()
 		while a:
 			lst.append(a)
 			a=inputf().strip()
 		return lst
+
+if __name__=="__main__":
+	print (Number.input())
+	print ("---------------------")
+	print (Number.input(2))
+	print ("---------------------")
+	print (String.input("pep"))
+	print ("---------------------")
+	print (Option.input((["a","b","c"],"c")))
+	print ("---------------------")
+	print (ListString.input((["a","b","c"])))
+	print ("---------------------")
+	print (MultipleChoice.input((["a","b","c"])))

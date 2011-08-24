@@ -1,6 +1,8 @@
 import re
 import datainput
 
+
+
 class payload:
 	def __init__(self):
 		self.count=0
@@ -139,7 +141,6 @@ class payload_list (payload):
 		payload.__init__(self)
 		self.list=list
 		self.count=len(list)
-		
 
 	def initialize(self):
 		self.current=0

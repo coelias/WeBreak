@@ -3,16 +3,17 @@
 # This module uses httplib2 (http://code.google.com/p/httplib2/) and can be used with with pyCurl (http://pycurl.sourceforge.net/)
 
 import re
-import sys
 import socks
 import threading
 import hashlib
+import globals
 
-VERSION=sys.version_info
-VERSION=VERSION[0]*10+VERSION[1]
-REQLOG=False
+import sys
+globals.VERSION=sys.version_info
+globals.VERSION=globals.VERSION[0]*10+globals.VERSION[1]
+globals.REQLOG=False
 
-if VERSION>30:
+if globals.VERSION>30:
 	from queue import Queue
 else:
 	from Queue import Queue
@@ -42,7 +43,7 @@ class HttpCMgr:
 
 			try:
 				resp,content=self.conn.request(url,method=method,redirections=redirections,body=body,headers=headers)
-				if VERSION>=30:
+				if globals.VERSION>=30:
 					content=content.decode()
 	
 				if str(resp["status"]) in HTTPCODES:
@@ -183,7 +184,7 @@ try:
 	raise Exception("a")
 except:
 	PYCURL=False
-	if VERSION<30:
+	if globals.VERSION<30:
 		import httplib2
 		from StringIO import StringIO
 		from urlparse import urlparse,urlunparse
@@ -478,7 +479,7 @@ Attributes:
 
 	def logReq(self):
 		Semaphore_Mutex.acquire()
-		f=open("/tmp/REQLOG-%d-%d" % (date.today().day,date.today().month) ,"a")
+		f=open("/tmp/globals.REQLOG-%d-%d" % (date.today().day,date.today().month) ,"a")
 		f.write( strftime("\r\n\r\n############################ %a, %d %b %Y %H:%M:%S\r\n", localtime()))
 		f.write(self.getAll())
 		f.close()
@@ -493,8 +494,8 @@ Attributes:
 
 	def perform(self):
 		'''Performs the request, then you can access the response through the response attribute'''
-		global REQLOG
-		if REQLOG:
+		global globals.REQLOG
+		if globals.REQLOG:
 			self.logReq()
 
 		self.CMGR.MakeRequest(self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self)
@@ -508,8 +509,7 @@ Callback function header: def callbackfunc(req,resp,info,excep):
 	* info: info provided by HttpReq.performMulti()
 	* excep: Exception object if the request failed'''
 
-		global REQLOG
-		if REQLOG:
+		if globals.REQLOG:
 			self.logReq()
 		
 		self.CMGR.MakeRequestMulti(callback,self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self,info=info)
@@ -563,7 +563,7 @@ class Response:
 	def getMd5(self):
 		'''Returns md5 of the http response content (html or whatever)'''
 		m = hashlib.md5()
-		if VERSION<30:
+		if globals.VERSION<30:
 			m.update(self.__content)
 		else:
 			m.update(self.__content.encode())
