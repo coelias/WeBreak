@@ -1,13 +1,14 @@
 import re
-import globals
-if globals.VERSION<30:
-	inputf=raw_input
-else:
-	inputf=input
-
+import sys
 
 class data:
-	pass
+	@staticmethod
+	def inputf(msg=""):
+		sys.stdout.write(msg)
+		sys.stdout.flush()
+		a=sys.stdin.readline()
+		return a
+	
 	
 class Number(data):
 	@staticmethod
@@ -16,7 +17,7 @@ class Number(data):
 			cad +=" [{0}]: ".format(default)
 		else:
 			cad+=": "
-		a=inputf(cad)
+		a=data.inputf(cad)
 		try:
 			return int(a)
 		except:
@@ -31,7 +32,7 @@ class String(data):
 			cad +=" [{0}]: ".format(default)
 		else:
 			cad+=": "
-		a=inputf(cad)
+		a=data.inputf(cad)
 		if not a.strip() and default:
 			return default
 		return a.replace("\r","").replace("\n","")
@@ -50,7 +51,7 @@ class Option(data):
 
 		for i in enumerate(opts,1):
 			print ("{0}: {1}".format(i[0],i[1]))
-		a=inputf(cad)
+		a=data.inputf(cad)
 		try:
 			a=int(a)
 			if a not in range(1,len(opts)+1):
@@ -66,7 +67,7 @@ class MultipleChoice(data):
 	def input(opts,cad="Select one or more options (use separated numbers): "):
 		for i in enumerate(opts,1):
 			print ("{0}: {1}".format(i[0],i[1]))
-		a=inputf(cad)
+		a=data.inputf(cad)
 		try:
 			a=[int(i) for i in re.findall("[0-9]+",a)]
 			for i in a:
@@ -83,11 +84,24 @@ class ListString(data):
 	def input(par,cad="Enter a list of strings (end with empty string) :"):
 		print (cad)
 		lst=[]
-		a=inputf().strip()
+		a=data.inputf().strip()
 		while a:
 			lst.append(a)
-			a=inputf().strip()
+			a=data.inputf().strip()
 		return lst
+
+class Text(data):
+	@staticmethod
+	def input(msg="Enter a text"):
+		msg+=" (finish with Ctl-D (Unix) or Ctl-Z+Return (Win)):\r\n"
+		print (msg)
+		text=[]
+		while 1:
+			a=sys.stdin.readline()
+			text.append(a)
+			if not a or a[-1]!="\n":
+				break
+		return "".join(text)
 
 if __name__=="__main__":
 	print (Number.input())
@@ -101,3 +115,5 @@ if __name__=="__main__":
 	print (ListString.input((["a","b","c"])))
 	print ("---------------------")
 	print (MultipleChoice.input((["a","b","c"])))
+	print ("---------------------")
+	print (Text.input())
