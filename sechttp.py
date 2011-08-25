@@ -494,7 +494,6 @@ Attributes:
 
 	def perform(self):
 		'''Performs the request, then you can access the response through the response attribute'''
-		global globals.REQLOG
 		if globals.REQLOG:
 			self.logReq()
 
