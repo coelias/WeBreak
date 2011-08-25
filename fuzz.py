@@ -1,32 +1,59 @@
+#   fuzz.py - Fuzzing classes
+#   Copyright (C) 2011 Carlos del Ojo Elias
+#   
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2, or (at your option)
+#   any later version.
+#   
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software Foundation,
+#   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
+#   
+#   Written by Carlos del Ojo Elias, deepbit@gmail.com
+
+
 import re
 import datainput
+import globals
 
 
-
-class payload:
+class Fuzz:
 	def __init__(self):
 		self.count=0
 		self.appended=None
 		self.actual=None
+		self.encoder=None
 
 	def __iter__ (self):
 		self.initialize()
 		a=self.next()
 		while a:
-			yield a
+			if not self.enc:
+				yield a
+			else:
+				yield self.enc.encode(a)
 			a=self.next()
 		raise StopIteration
 
 	def initialize(self):
 		pass
 
+	def addEncoder(self,enc):
+		self.encoder=enc
+
 	def __len__(self):
 		if self.appended!=None:
 			return self.count*len(self.appended)
 		return self.count
 
-	def append(self,payload):
-		self.appended=payload
+	def append(self,fuzz):
+		self.appended=fuzz
 		self.appenditerator=self.appended.__iter__()
 
 	def next (self):
@@ -34,29 +61,28 @@ class payload:
 			try:
 				if not self.actual:
 					self.actual=self.do_next()
-				return self.actual+self.appenditerator.next()
+				if globals.VERSION<30:
+					return self.actual+self.appenditerator.next()
+				return self.actual+self.appenditerator.__next__()
 			except StopIteration:
 				self.actual=self.do_next()
 				self.appenditerator=self.appended.__iter__()
-				return self.actual+self.appenditerator.next()
+				if globals.VERSION<30:
+					return self.actual+self.appenditerator.next()
+				return self.actual+self.appenditerator.__next__()
 		else:
 			return self.do_next()
 
 	def do_next(self):
 		raise StopIteration
 
-class payload_iterator:
-	pass
 
-
-######## Inheritances
-
-class payload_file (payload):
-	DESC=["File payload","Use the file content (lines) as payload"]
+class FileFuzz (Fuzz):
+	DESC=["File fuzz","Use the file content (lines) as fuzz"]
 	PARAMS=[(True,"Enter a path","file",datainput.String,"")]
 
 	def __init__(self,file):
-		payload.__init__(self)
+		Fuzz.__init__(self)
 		self.file=file
 
 	def __len__(self):
@@ -70,15 +96,17 @@ class payload_file (payload):
 	
 	def do_next (self):
 		try:
-			return self.f.next().strip()
+			if globals.VERSION<30:
+				return self.f.next().strip()
+			return self.f.__next__().strip()
 		except StopIteration:
 			self.f.close()
 			raise StopIteration
 
 
 
-class payload_range (payload):
-	DESC=["Range payload","Use a numeric range (in any base) as a payload"]
+class RangeFuzz (Fuzz):
+	DESC=["Range fuzz","Use a numeric range (in any base) as a fuzz"]
 	PARAMS=[(True,"Enter a range (eg 1-10,a-f)","range",datainput.String,"[A-Za-z0-9]+[^A-Za-z0-9]+[A-Za-z0-9]+"),
 			(False,"Enter the number width","width",datainput.Number,1),
 			(False,"Choose a numeric base","base",datainput.Option,([8,10,16],10)),
@@ -86,7 +114,7 @@ class payload_range (payload):
 			(False,"Enter a step increment for the range","step",datainput.Number,1)]
 
 	def __init__(self,range,width=0,base=10,suffix="",step=1):    
-		payload.__init__(self)
+		Fuzz.__init__(self)
 		try:
 			ran=re.findall("([A-Za-z0-9]+)[^A-Za-z0-9]+([A-Za-z0-9]+)",range)[0]
 			self.minimum=int(ran[0],base)
@@ -98,7 +126,7 @@ class payload_range (payload):
 			self.step=step
 			self.suffix=suffix
 		except:
-			raise Exception, "Bad range format or base"
+			raise Exception("Bad range format or base")
 
 	def initialize(self):
 		self.current=self.minimum
@@ -119,26 +147,24 @@ class payload_range (payload):
 
 		pl="%"+str(lgth)+"s"
 		pl= pl % (num)
-		payl=self.suffix+pl.replace(" ","0")
+		fz=self.suffix+pl.replace(" ","0")
 
 		if self.width:
-			payl="%0"+str(self.width)+"s"
-			payl=payl % (pl)
+			fz="%0"+str(self.width)+"s"
+			fz=fz % (pl)
 		else:
-			payl=pl
+			fz=pl
 
-		payl=payl.replace(" ","0")
+		fz=fz.replace(" ","0")
 
 		self.current+=self.step
-		return self.suffix+payl
+		return self.suffix+fz
 	
 
-######################### PAYLOAD LIST
-
-class payload_list (payload):
+class ListFuzz (Fuzz):
 	PARAMS=[(True,"Enter a new line for easch string (empty line to finish)","list",datainput.ListString,"")]
 	def __init__(self,list):   
-		payload.__init__(self)
+		Fuzz.__init__(self)
 		self.list=list
 		self.count=len(list)
 
@@ -152,4 +178,19 @@ class payload_list (payload):
 			return elem
 		except:
 			raise StopIteration
-		
+	
+
+if __name__=="__main__":
+	a=ListFuzz(["a","b","c"])
+	print ([i for i in a])
+	b=RangeFuzz("1-10",4,7,"@",2)
+	print ([i for i in b])
+	a.append(b)
+	print ([i for i in a])
+	w=open("/tmp/tmp.tmp","w")
+	w.write("1\r\n2\r\n3\r\n4")
+	w.close()
+	c=FileFuzz("/tmp/tmp.tmp")
+	c.append(a)
+	
+	print ([i for i in c])

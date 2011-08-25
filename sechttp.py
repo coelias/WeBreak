@@ -1,5 +1,22 @@
-# Covered by GPL v2.0
-# sechttp.py: a HTTP protocol security abstraction by Carlos del Ojo (deepbit@gmail.com)
+#    sechttp.py: a HTTP protocol security abstraction by Carlos del Ojo (deepbit@gmail.com)
+#   Copyright (C) 2011 Carlos del Ojo Elias
+#   
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2, or (at your option)
+#   any later version.
+#   
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software Foundation,
+#   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. 
+#   
+#   Written by Carlos del Ojo Elias, deepbit@gmail.com
+
 # This module uses httplib2 (http://code.google.com/p/httplib2/) and can be used with with pyCurl (http://pycurl.sourceforge.net/)
 
 import re
