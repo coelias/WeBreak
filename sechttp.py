@@ -1,4 +1,4 @@
-#    sechttp.py: a HTTP protocol security abstraction by Carlos del Ojo (deepbit@gmail.com)
+#   sechttp.py: a HTTP protocol security abstraction by Carlos del Ojo (deepbit@gmail.com)
 #   Copyright (C) 2011 Carlos del Ojo Elias
 #   
 #   This program is free software; you can redistribute it and/or modify
@@ -25,10 +25,6 @@ import threading
 import hashlib
 import globals
 
-import sys
-globals.VERSION=sys.version_info
-globals.VERSION=globals.VERSION[0]*10+globals.VERSION[1]
-globals.REQLOG=False
 
 if globals.VERSION>30:
 	from queue import Queue

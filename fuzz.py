@@ -1,4 +1,4 @@
-#   fuzz.py - Fuzzing classes
+#   fuzz.py - Fuzzing classes and encoding functions
 #   Copyright (C) 2011 Carlos del Ojo Elias
 #   
 #   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,13 @@
 import re
 import datainput
 import globals
+import base64
+import hashlib
 
+if globals.VERSION <30:
+	from urllib import quote
+else:
+	from urllib.parse import quote
 
 class Fuzz:
 	def __init__(self):
@@ -34,17 +40,17 @@ class Fuzz:
 		self.initialize()
 		a=self.next()
 		while a:
-			if not self.enc:
+			if not self.encoder:
 				yield a
 			else:
-				yield self.enc.encode(a)
+				yield self.encoder(a)
 			a=self.next()
 		raise StopIteration
 
 	def initialize(self):
 		pass
 
-	def addEncoder(self,enc):
+	def setEncoder(self,enc):
 		self.encoder=enc
 
 	def __len__(self):
@@ -180,6 +186,142 @@ class ListFuzz (Fuzz):
 			raise StopIteration
 	
 
+######## ENCODINGS ###########################
+
+class ENCODER:
+	FNCS=None
+	INFO=None
+	
+	@staticmethod
+	def list():
+		ENCODER.FNCS=dict([(getattr(ENCODER,i).__doc__.split(":")[1].split("-")[0].strip(),getattr(ENCODER,i)) for i in dir(ENCODER) if getattr(ENCODER,i).__doc__ and getattr(ENCODER,i).__doc__.startswith("ENC:")])
+		ENCODER.INFO=dict([(getattr(ENCODER,i).__doc__.split(":")[1].split("-")[0].strip(),getattr(ENCODER,i).__doc__.split(":")[1].split("-")[1].strip()) for i in dir(ENCODER) if getattr(ENCODER,i).__doc__ and getattr(ENCODER,i).__doc__.startswith("ENC:")])
+
+	@staticmethod
+	def urlencode (info):
+		'''ENC: urlencode - Encodes text to be used in an url'''
+		return quote(info)
+	
+	@staticmethod
+	def double_urlencode (info):
+		'''ENC: double urlencode - Double urlencoding'''
+		return quote(quote(info))
+
+	@staticmethod
+	def base64 (info):
+		'''ENC: base64 - Encode a string to base64'''
+		if globals.VERSION<30:
+			return base64.standard_b64encode(info)
+		return base64.b64encode(info.encode()).decode()
+
+	@staticmethod
+	def hexa (info):
+		'''ENC: Html Hexadecimal - Encode a string as Hexadecimal (a -> %61)'''
+		return "".join(["{0:0>2}".format(hex(ord(i))).replace("0x","%") for i in info])
+	
+	@staticmethod
+	def sha1 (info):
+		'''ENC: sha1 - Process data unsing Sha1 digest alg. '''
+		hs=hashlib.sha1()
+		hs.update(info.encode())
+		return hs.hexdigest()
+	
+	@staticmethod
+	def md5 (info):
+		'''ENC: md5 - Process data unsing Md5 digest alg.'''
+		hs=hashlib.md5()
+		hs.update(info.encode())
+		return hs.hexdigest()
+
+	
+	@staticmethod
+	def mssql_str (info):
+		'''ENC: MSsql encoding - MSsql string encoding'''
+		return "+".join(["CHAR({0})".format(ord(i)) for i in info])
+
+	@staticmethod
+	def mysql_str (info):
+		'''ENC: Mysql encoding - Mysql string encoding'''
+		return "CHAR("+",".join([str(ord(i)) for i in info])+")"
+	
+	@staticmethod
+	def oracle_str (info):
+		'''ENC: Oracle encoding - Oracle string encoding'''
+		return "||".join(["chr({0})".format(ord(i)) for i in info])
+
+########## SHIT TO RECODE ###################
+
+	# http://wikisecure.net/security/uri-encoding-to-bypass-idsips
+	@staticmethod
+	def doble_nibble_hex (info):
+#		'''ENC: nibble hex - Encode a string as Hexadecimal (a -> %61)'''
+		strt = ""
+		con = "%%%02x"
+		s=re.compile(r"/|;|=|:|&|@|\\|\?")
+		for c in info:
+			if s.search(c):
+				strt += c
+				continue
+			temp = hex(ord(c))[2:]
+			strt += "%%%s%%%02x" % (str(temp[:1]), ord(temp[1:]))
+		return strt
+			
+	@staticmethod
+	def binascii (info):
+#		'''ENC: Binascii - Encode a string as Hexadecimal (a -> %61)'''
+		res = binascii.hexlify(info.encode())		
+		return res
+	
+	@staticmethod
+	def html (info):
+		res=info
+		res=res.replace("<","&lt;")
+		res=res.replace(">","&gt;")
+		res=res.replace("\"","&quot;")
+		res=res.replace("'","&apos;")
+		#res=res.replace("&","&amp;")
+		return res
+	
+	@staticmethod
+	def html_decimal (info):
+		new=""
+		for x in info:
+			new+="&#"+str(ord(x))+";"
+		return new
+	
+	@staticmethod
+	def html_hexadecimal (info):
+		new=""
+		for x in info:
+			val="%02x" % ord(x)
+			new+="&#x"+str(val)+";"
+		return new
+	
+	@staticmethod
+	def utf8_binary (info):
+		new=""
+		for x in info:
+			val="%02x" % ord(x)
+			new+="\\x"+str(val)
+		return new
+	
+	@staticmethod
+	def utf8 (info):
+		new=""
+		for x in info:
+			val="%02x" % ord(x)
+			if len(val)==2:
+				new+="\\u00"+str(val)
+			else:
+				new+="\\u"+str(val)
+		return new
+	
+	
+	
+
+ENCODER.list()
+
+
 if __name__=="__main__":
 	a=ListFuzz(["a","b","c"])
 	print ([i for i in a])
@@ -192,5 +334,11 @@ if __name__=="__main__":
 	w.close()
 	c=FileFuzz("/tmp/tmp.tmp")
 	c.append(a)
-	
 	print ([i for i in c])
+	c.setEncoder(ENCODER.base64)
+	print ([i for i in c])
+
+	print("\r\n\r\n################## ENCODINGS ###################\r\n\r\n")
+
+	for i,j in ENCODER.FNCS.items():
+		print ("Encoding ({0})(Hello World!):".format(i),j("Hello World!"))
