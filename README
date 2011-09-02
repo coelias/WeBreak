@@ -14,25 +14,19 @@ It must be read as "We Break", that is what we use/like to do :P.
 I decided to start this project in order to improve and mix my previous
 security tools (Wfuzz,ProxyStrike, and the first version of WeBreak)
 
-Features
+Features    [ - Pending, # Done ] 
 ========
-Console and web based interface
-Fuzzing engine
-Dictionary generator
-Plugins Engine
-Sql injection Plugin
-XSS Plugin
-Passive proxy
-and even more!!!
+[-] Console and web based interface
+[-] Dictionary generator
+[-] Plugins Engine
+[-] XSS Plugin
+[-] Passive proxy
+[#] Http Engine (v.0.1)
+[#] Payload and encodings module
+[#] Simple WebServer
+[#] Sql Injection Engine
+[#] Fuzzing engine
 
-Done
-====
-Http Engine (v.0.1)
-Payload and encodings module
-
-TODO
-====
-Almost Everyting
 
 
 
