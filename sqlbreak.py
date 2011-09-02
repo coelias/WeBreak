@@ -342,17 +342,21 @@ class SqlBreak:
 		self.results=[]
 
 
-	def test(self,allVars=True,post=False,get=False,headings=False):
+	def test(self,allVars=True,post=False,get=False,headings=False,varSet=None):
 		assert allVars or post or get or headings
-		vars=[]
 
-		if allVars and not post and not get and not headings:
-			post=get=headings=True
+		if varSet:
+			vars=varSet
+		else:
+			vars=[]
 
-		# We need a tuple in order to identify the Get variables cos in execute we need to specify inUrl=True
-		if get: vars+=[("GET",i) for i in self.OrigReq.getUrlVars()]
-		if headings: vars+=[(None,i) for i in self.OrigReq.getHeadingsVars()]
-		if post: vars+=[(None,i) for i in self.OrigReq.getPostVars()]
+			if allVars and not post and not get and not headings:
+				post=get=headings=True
+
+			# We need a tuple in order to identify the Get variables cos in execute we need to specify inUrl=True
+			if get: vars+=[("GET",i) for i in self.OrigReq.getUrlVars()]
+			if headings: vars+=[(None,i) for i in self.OrigReq.getHeadingsVars()]
+			if post: vars+=[(None,i) for i in self.OrigReq.getPostVars()]
 
 		res,resp=self.stability(self.OrigReq)
 
@@ -386,6 +390,23 @@ class SqlBreak:
 
 if __name__=='__main__':
 
+	def printvars(vars,varsperline,title,startnumber=0):
+		if vars:
+
+			print ("================ "+title+" ======================")
+			l=int(80/varsperline)
+			j=0
+			for i in v:
+				j+=1
+				startnumber+=1
+				sys.stdout.write(("{0:>2}. {1:<"+str(l)+"} ").format(startnumber,i.name))
+				if j>=varsperline: 
+					sys.stdout.write("\r\n")
+					sys.stdout.flush()
+					j=0
+			print ("\r\n")
+		
+
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "hb:d:x:D",["xml"])
 		optsd=dict(opts)
@@ -408,7 +429,30 @@ if __name__=='__main__':
 		sys.exit(-1)
 
 	s=SqlBreak(a)
-	s.test()
+
+	varsperline=int(80/(max([len(i.name) for i in a.getVars()])+5))
+	print (varsperline)
+	vars=[]
+	v=a.getUrlVars()
+	printvars(v,varsperline,"Variables in URL",0)
+	vars+=[("GET",i) for i in v]
+	v=a.getPostVars()
+	printvars(v,varsperline,"Variables in Body",len(vars))
+	vars+=[(None,i) for i in v]
+	v=a.getHeadingsVars()
+	printvars(v,varsperline,"Variables in Headings",len(vars))
+	vars+=[(None,i) for i in v]
+
+	sys.stdout.write("Select the variableis you want to attack (separated numbers) [all]:")
+	sys.stdout.flush()
+	ns=re.findall("[0-9]+",sys.stdin.readline())
+	if not ns:
+		varsattack=vars
+	else:
+		varsattack=[vars[int(i)-1] for i in ns]
+
+
+	s.test(varSet=varsattack)
 	if "--xml" in optsd:
 		print (s.getXMLResults().toprettyxml(indent="\t"))
 	else:
