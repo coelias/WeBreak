@@ -45,9 +45,10 @@ class HttpCMgr:
 		def __init__(self,proxy=None):
 			proxy_info=None
 			if proxy:
-				proxy_info = httplib2.ProxyInfo(socks.PROXY_TYPE_HTTP, proxy[0], proxy[1])
+				proxy_info = httplib2.ProxyInfo(socks.PROXY_TYPE_HTTP, proxy[0], int(proxy[1]))
 			HttpCMgr.Connection.__init__(self)
 			self.conn=httplib2.Http(proxy_info=proxy_info)
+
 
 		def request(self,method,url,headers,body,auth,redirections):
 			if auth:
@@ -144,7 +145,7 @@ class HttpCMgr:
 					resp=Response()
 					resp.parseResponse(rawResponse)		# Creating and parsint the output
 					if callback:
-						callback(httpreq,resp,info)		# Calling the callback
+						callback(httpreq,resp,info,None)		# Calling the callback
 					httpreq.response=resp
 				except Exception as e:
 					self.__releaseConnection(conn)
@@ -292,6 +293,13 @@ class httpInfoBlock:
 		if not self.allInfo:
 			return ""
 		return "".join([str(i) for i in self.allInfo])
+
+	def appendString(self,cad):
+		self.allInfo.append(cad)
+
+	def appendVariable(self,var):
+		self.allInfo.append(var)
+		self.detectedVars.append(var)
 	
 	def __str__(self):
 		return self.getRaw()
@@ -444,6 +452,10 @@ Attributes:
 
 	################################## METHODS ######################################
 
+	def setCmgr(self,cmgr):
+		'''Set a new Connection manager'''
+		self.CMGR=cmgr
+
 	def setUrl (self, urltmp):
 		'''Set the URL you want to make the request'''
 		self.url=httpUrl(urltmp)
@@ -456,6 +468,18 @@ Attributes:
 	def getVars(self):
 		'''Returns all detected variables inside the request in a list of sechttp.Variable Objects'''
 		return self.url.getVars()+self.__postdata.getVars()+self.headers.getVars()
+
+	def getUrlVars(self):
+		'''Get variables only from URL'''
+		return self.url.getVars()
+
+	def getHeadingsVars(self):
+		'''Get variables only from the headings'''
+		return self.headers.getVars()
+
+	def getPostVars(self):
+		'''Get variable only from the body'''
+		return self.__postdata.getVars()
 
 
 	#----------------------------------- Location --------------------------------------#
@@ -509,6 +533,9 @@ Attributes:
 		'''Performs the request, then you can access the response through the response attribute'''
 		if globals.REQLOG:
 			self.logReq()
+
+		if self.__METHOD=="POST":
+			self.headers["content-type"]="application/x-www-form-urlencoded"
 
 		self.CMGR.MakeRequest(self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self)
 
