@@ -46,7 +46,7 @@ class XssTest:
 
 	THISTAG=re.compile("^(!--|[a-z]+ |![a-z]+ )")
 	PRETAGS=re.compile("<[^ >]+")
-	LETTERS=re.compile("[a-z]+")
+	LETTERS=re.compile("[a-z!-]+")
 
 
 	def __init__(self,req):	
