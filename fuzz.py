@@ -208,6 +208,11 @@ class ENCODER:
 		return quote(quote(info))
 
 	@staticmethod
+	def triple_urlencode (info):
+		'''ENC: triple urlencode - Triple urlencoding'''
+		return quote(quote(quote(info)))
+
+	@staticmethod
 	def base64 (info):
 		'''ENC: base64 - Encode a string to base64'''
 		if globals.VERSION<30:
@@ -233,6 +238,10 @@ class ENCODER:
 		hs.update(info.encode())
 		return hs.hexdigest()
 
+	@staticmethod
+	def html_unicode (info):
+		'''ENC: Html-utf8 - Html Unicode encoding'''
+		return ''.join(["&#x{0};".format(hex(ord(i))[2:]) for i in info])
 	
 	@staticmethod
 	def mssql_str (info):
@@ -289,16 +298,10 @@ class ENCODER:
 			new+="&#"+str(ord(x))+";"
 		return new
 	
-	@staticmethod
-	def html_hexadecimal (info):
-		new=""
-		for x in info:
-			val="%02x" % ord(x)
-			new+="&#x"+str(val)+";"
-		return new
 	
 	@staticmethod
 	def utf8_binary (info):
+		'''ENC: utf8_bin - Utf8 Binary Encoding'''
 		new=""
 		for x in info:
 			val="%02x" % ord(x)
@@ -306,7 +309,8 @@ class ENCODER:
 		return new
 	
 	@staticmethod
-	def utf8 (info):
+	def utf8_ (info):
+		'''ENC: utf8 - Utf8 Encoding'''
 		new=""
 		for x in info:
 			val="%02x" % ord(x)

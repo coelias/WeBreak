@@ -1,3 +1,23 @@
+#   sexss.py: Secure XSS tester by Carlos del Ojo (deepbit@gmail.com) and Abel Gomez (zprian@gmail.com)
+#   Copyright (C) 2011 Carlos del Ojo Elias 
+#    
+#   This program is free software; you can redistribute it and/or modify 
+#   it under the terms of the GNU General Public License as published by 
+#   the Free Software Foundation; either version 2, or (at your option) 
+#   any later version. 
+#    
+#   This program is distributed in the hope that it will be useful, 
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+#   GNU General Public License for more details. 
+#    
+#   You should have received a copy of the GNU General Public License 
+#   along with this program; if not, write to the Free Software Foundation, 
+#   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
+#    
+#   Written by Carlos del Ojo Elias, deepbit@gmail.com 
+#		   and Abel Gomez Aguila, zprian@gmail.com
+
 from sechttp import *
 import sys
 from fuzz import ENCODER
@@ -7,15 +27,15 @@ import getopt
 
 class XssTest:
 	XSS_SET=[
-	["[<]!--[#]echo%20var=[']HTTP_USER_AGENT[']%20--[>]" , "XSSIPWNR" , "SSI"],
-	['XSS[\']PWNR', 'XSS\'PWNR', "'"],
-	['XSS["]PWNR','XSS"PWNR' ,'"'],
-	['XSS[<]PWNR','XSS<PWNR' ,'<'],
-	['XSS[>]PWNR','XSS>PWNR' ,'>'],
-	['XSS[(]PWNR','XSS(PWNR' ,'('],
-	['XSS[)]PWNR','XSS)PWNR' ,')'],
-	['XS-[<SCRIPT>]alert[(]document.cookie[)<]/SCRIPT[>]-SPWNR','XS-<SCRIPT>alert(document.cookie)</SCRIPT>-SPWNR' ,'Scripting'],
-	['XS-[<]scr[<]script[>]ipt[>]-SPWNR','XS-<script>-SPWNR' ,'Scripting']
+		["[<]!--[#]echo%20var=[']HTTP_USER_AGENT[']%20--[>]" , "XSSIPWNR" , "SSI"],
+		['XSS[\']PWNR', 'XSS\'PWNR', "'"],
+		['XSS["]PWNR','XSS"PWNR' ,'"'],
+		['XSS[<]PWNR','XSS<PWNR' ,'<'],
+		['XSS[>]PWNR','XSS>PWNR' ,'>'],
+		['XSS[(]PWNR','XSS(PWNR' ,'('],
+		['XSS[)]PWNR','XSS)PWNR' ,')'],
+		['XS-[<SCRIPT>]alert[(]document.cookie[)<]/SCRIPT[>]-SPWNR','XS-<SCRIPT>alert(document.cookie)</SCRIPT>-SPWNR' ,'Scripting'],
+		['XS-[<]scr[<]script[>]ipt[>]-SPWNR','XS-<script>-SPWNR' ,'Scripting']
 	]
 
 
@@ -147,13 +167,6 @@ class XssTest:
 
 
 
-#if __name__=='__main__':
-#	a=HttpReq()
-#	a.setUrl(sys.argv[1])
-#	xt=XssTest(a)
-#	for i in xt.test():
-#		print (i)
-#		print ("-------------------------")
 
 if __name__=='__main__':
 

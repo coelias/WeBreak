@@ -223,7 +223,7 @@ class Variable:
 		#: Variable value
 		self.value=value
 		self.__initValue=value
-		self.__extraInfo=extraInfo
+		self.extraInfo=extraInfo
 		self.__eq=eq
 	
 	def update(self,val):
@@ -256,12 +256,14 @@ class Variable:
 		'''Raw representation of the variable '''
 		return "".join([self.name,self.__eq,self.value])
 
+	
+
 class httpInfoBlock:
 	def __init__(self):
 		self.detectedVars=[]
 		self.allInfo=None
 
-	def makeVars(self,origcad,regexpool):
+	def makeVars(self,origcad,regexpool,info=None):
 		'''This function receives a source string, and a pool of regexps to create new Variables objects'''
 		self.detectedVars=[]
 		vars=[]
@@ -269,7 +271,7 @@ class httpInfoBlock:
 			a=i.finditer(origcad)
 			for k in a:
 				# Groups variables, sorting the first the last found, with position and lentgh (a=b&c=d) ==> [[c=d,4, 3],[a=b,0, 3]]
-				vars.append([Variable(k.groups()[0],k.groups()[1],j),k.start(),len(k.group())])
+				vars.append([Variable(k.groups()[0],k.groups()[1],j,extraInfo=info),k.start(),len(k.group())])
 
 		vars.sort(key=self.sortf,reverse=True)
 
@@ -318,10 +320,10 @@ class httpUrl():
 		self.scheme=parseurl[0]
 		self.netloc=parseurl[1]
 		self.__path=httpInfoBlock()
-		self.__path.makeVars(parseurl[2],HttpPathVarsFormats)
+		self.__path.makeVars(parseurl[2],HttpPathVarsFormats,"GET")
 		self.__params=parseurl[3]
 		self.__query=httpInfoBlock()
-		self.__query.makeVars(parseurl[4],HttpQueryVarsFormats)
+		self.__query.makeVars(parseurl[4],HttpQueryVarsFormats,"GET")
 		self.__fragment=parseurl[5]
 
 	def __getattr__ (self,name):
@@ -354,7 +356,7 @@ class httpHeaders():
 			return
 		if key in self.KeysWithVariables:
 			self.headers[key]=httpInfoBlock()
-			self.headers[key].makeVars(value,HttpHeadersVarsFormats)
+			self.headers[key].makeVars(value,HttpHeadersVarsFormats,"Header")
 		else:
 			self.headers[key]=value
 
@@ -463,7 +465,7 @@ Attributes:
 	def setPostData(self,data):
 		'''Add Post data to the request'''
 		self.__METHOD="POST"
-		self.__postdata.makeVars(data,HttpQueryVarsFormats)
+		self.__postdata.makeVars(data,HttpQueryVarsFormats,"POST")
 
 	def getVars(self):
 		'''Returns all detected variables inside the request in a list of sechttp.Variable Objects'''

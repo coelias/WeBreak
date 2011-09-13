@@ -418,16 +418,17 @@ SqlTest("MSAccess",LogicNode("and").add(OpNode("'+chr(Time()-Time())+'",True),Op
 				post=get=headings=True
 
 			# We need a tuple in order to identify the Get variables cos in execute we need to specify inUrl=True
-			if get: vars+=[("GET",i) for i in self.OrigReq.getUrlVars()]
-			if headings: vars+=[(None,i) for i in self.OrigReq.getHeadingsVars()]
-			if post: vars+=[(None,i) for i in self.OrigReq.getPostVars()]
+			if get: vars+=[i for i in self.OrigReq.getUrlVars()]
+			if headings: vars+=[i for i in self.OrigReq.getHeadingsVars()]
+			if post: vars+=[i for i in self.OrigReq.getPostVars()]
 
 		res,resp=self.stability(self.OrigReq)
 
 		if res:
 			dynO=SqlBreak.DynamicWordsMixed(resp)
 
-			for GET,v in vars:
+			for v in vars:
+				GET=v.extraInfo
 				inj=None
 				error=None
 
@@ -514,13 +515,13 @@ if __name__=='__main__':
 	vars=[]
 	v=a.getUrlVars()
 	printvars(v,varsperline,"Variables in URL",0)
-	vars+=[("GET",i) for i in v]
+	vars+=[i for i in v]
 	v=a.getPostVars()
 	printvars(v,varsperline,"Variables in Body",len(vars))
-	vars+=[(None,i) for i in v]
+	vars+=[i for i in v]
 	v=a.getHeadingsVars()
 	printvars(v,varsperline,"Variables in Headings",len(vars))
-	vars+=[(None,i) for i in v]
+	vars+=[i for i in v]
 
 	sys.stdout.write("Select the variableis you want to attack (separated numbers) [all]:")
 	sys.stdout.flush()
