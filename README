@@ -19,13 +19,13 @@ Features    [ - Pending, # Done ]
 [-] Console and web based interface
 [-] Dictionary generator
 [-] Plugins Engine
-[-] XSS Plugin
 [-] Passive proxy
 [#] Http Engine (v.0.1)
 [#] Payload and encodings module
 [#] Simple WebServer
 [#] Sql Injection Engine
 [#] Fuzzing engine
+[#] XSS Engine
 
 
 
