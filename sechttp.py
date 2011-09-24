@@ -24,6 +24,7 @@ import socks
 import threading
 import hashlib
 import globals
+import cookielib
 
 
 if globals.VERSION>30:
@@ -32,6 +33,7 @@ else:
 	from Queue import Queue
 
 HTTPCODES={ '100':"Continue", '101':"Switching Protocols", '200':"OK", '201':"Created", '202':"Accepted", '203':"Non-Authoritative Information", '204':"No Content", '205':"Reset Content", '206':"Partial Content", '300':"Multiple Choices", '301':"Moved Permanently", '302':"Found", '303':"See Other", '304':"Not Modified", '305':"Use Proxy", '306':"(Unused)", '307':"Temporary Redirect", '400':"Bad Request", '401':"Unauthorized", '402':"Payment Required", '403':"Forbidden", '404':"Not Found", '405':"Method Not Allowed", '406':"Not Acceptable", '407':"Proxy Authentication Required", '408':"Request Timeout", '409':"Conflict", '410':"Gone", '411':"Length Required", '412':"Precondition Failed", '413':"Request Entity Too Large", '414':"Request-URI Too Long", '415':"Unsupported Media Type", '416':"Requested Range Not Satisfiable", '417':"Expectation Failed", '500':"Internal Server Error", '501':"Not Implemented", '502':"Bad Gateway", '503':"Service Unavailable", '504':"Gateway Timeout", '505':"HTTP Version Not Supported"}
+
 
 class HttpCMgr:
 	'''Connection Manager: Used by any HttpReq Object in order to create http connections. It's a wrapper of any other HTTP engine, like PyCurl, Httplib2, Requests, or any other'''
@@ -55,6 +57,11 @@ class HttpCMgr:
 				u,p,d=auth
 				self.conn.add_credentials(u,p,d)
 
+			if not redirections:
+				self.conn.follow_redirects=False
+			else:
+				self.conn.follow_redirects=True
+
 			try:
 				resp,content=self.conn.request(url,method=method,redirections=redirections,body=body,headers=headers)
 				if globals.VERSION>=30:
@@ -67,7 +74,7 @@ class HttpCMgr:
 	
 				rawResponse="HTTP/1.1 {0} {1}\r\n".format(resp["status"],msg)
 				del resp["status"]
-				for i,j in resp.items():
+				for i,j in resp["headers"]:
 					rawResponse+="{0}: {1}\r\n".format(i,j)
 				rawResponse+="\r\n{0}".format(content)
 			except Exception as e:
@@ -146,7 +153,7 @@ class HttpCMgr:
 					resp.parseResponse(rawResponse)		# Creating and parsint the output
 					if callback:
 						callback(httpreq,resp,info,None)		# Calling the callback
-					httpreq.response=resp
+					httpreq.addResponse(resp)
 				except Exception as e:
 					self.__releaseConnection(conn)
 					raise e
@@ -176,7 +183,7 @@ class HttpCMgr:
 			rawResponse=conn.request(method,url,headers,body,auth,redirections)
 			resp=Response()
 			resp.parseResponse(rawResponse)
-			httpReq.response=resp
+			httpReq.addResponse(resp)
 		except Exception as e:
 			self.__releaseConnection(conn)
 			raise e
@@ -336,11 +343,14 @@ class httpUrl():
 		elif name=="urlWithoutPath":
 			return urlunparse((self.scheme,self.netloc,"","","",""))
 		elif name=="path":
-			return self.__path.getRaw()
+			ph=self.__path.getRaw()
+			if not ph: ph="/"
+			return ph
 		elif name=="query":
 			return self.__query.getRaw()
 		else:
 			raise AttributeError
+
 
 	def getVars(self):
 		return self.__path.getVars()+self.__query.getVars()
@@ -410,6 +420,8 @@ Attributes:
 '''
 	
 	DEFAULTCMGR=HttpCMgr()
+	COOKIEMGR=cookielib.CookieJar(cookielib.DefaultCookiePolicy())
+	USE_COOKIEMGR=False
 
 	def __init__(self,CMGR=None):
 		if not CMGR:
@@ -451,6 +463,15 @@ Attributes:
 				return self.__uknPostData
 		else:
 			raise AttributeError
+
+	#functions because of CookieJar Compatibility
+	def get_full_url(self):
+		return self.completeUrl
+	def get_host(self):
+		return self.url.netloc
+	def is_unverifiable(self):
+		return True
+	get_origin_req_host=get_host
 
 	################################## METHODS ######################################
 
@@ -509,6 +530,12 @@ Attributes:
 	def __contains__(self,key):
 		'''Use 'in' key to guess if it contains a header'''
 		return key in self.headers
+
+	def add_header(self,k,v):
+		self.headers[k]=v
+
+	add_unredirected_header=add_header
+	has_header=__contains__
 	
 	################################################################################
 
@@ -535,6 +562,8 @@ Attributes:
 		'''Performs the request, then you can access the response through the response attribute'''
 		if globals.REQLOG:
 			self.logReq()
+		if HttpReq.USE_COOKIEMGR:
+			HttpReq.COOKIEMGR.add_cookie_header(self)
 
 		if self.__METHOD=="POST":
 			self.headers["content-type"]="application/x-www-form-urlencoded"
@@ -552,8 +581,17 @@ Callback function header: def callbackfunc(req,resp,info,excep):
 
 		if globals.REQLOG:
 			self.logReq()
+
+		if HttpReq.USE_COOKIEMGR:
+			HttpReq.COOKIEMGR.add_cookie_header(self)
 		
 		self.CMGR.MakeRequestMulti(callback,self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self,info=info)
+
+	def addResponse(self,resp):
+		self.response=resp
+		if HttpReq.USE_COOKIEMGR:
+			HttpReq.COOKIEMGR.extract_cookies(resp,self)
+
 
 
 	def parseRequest(self,rawreq,scheme):
@@ -595,6 +633,10 @@ class Response:
 
 		self.attrValDic={}
 
+	# needed because of cookiejar compatibility
+	def info(self):
+		return self
+
 	def copy(self):
 		'''Returns another Response copy'''
 		a=Response()
@@ -624,11 +666,15 @@ class Response:
 				self.__headers.remove(i)
 
 	def __getitem__ (self,key):
-		'''Returns a header value or None if it wasn't found'''
+		'''Returns a LIST of header values or None if it wasn't found '''
+		ret=[]
 		for i,j in self.__headers:
 			if key.lower()==i.lower():
-				return  j
-		return None
+				ret.append(j)
+		return ret
+
+	# function because of CookieJar compatibility
+	getheaders=__getitem__
 
 	def getCookie (self):
 		'''Returns the Cookie.'''
