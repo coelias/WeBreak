@@ -52,18 +52,15 @@ class HttpCMgr:
 			self.conn=httplib2.Http(proxy_info=proxy_info)
 
 
-		def request(self,method,url,headers,body,auth,redirections):
+		def request(self,method,url,headers,body,auth):
 			if auth:
 				u,p,d=auth
 				self.conn.add_credentials(u,p,d)
 
-			if not redirections:
-				self.conn.follow_redirects=False
-			else:
-				self.conn.follow_redirects=True
+			self.conn.follow_redirects=False
 
 			try:
-				resp,content=self.conn.request(url,method=method,redirections=redirections,body=body,headers=headers)
+				resp,content=self.conn.request(url,method=method,body=body,headers=headers)
 				if globals.VERSION>=30:
 					content=content.decode()
 	
@@ -177,10 +174,10 @@ class HttpCMgr:
 		self.__Threads=threads
 		
 
-	def MakeRequest(self,method,url,headers,body,auth,redirections,httpReq):
+	def MakeRequest(self,method,url,headers,body,auth,httpReq):
 		conn=self.__getConnection()
 		try:
-			rawResponse=conn.request(method,url,headers,body,auth,redirections)
+			rawResponse=conn.request(method,url,headers,body,auth)
 			resp=Response()
 			resp.parseResponse(rawResponse)
 			httpReq.addResponse(resp)
@@ -189,8 +186,8 @@ class HttpCMgr:
 			raise e
 		self.__releaseConnection(conn)
 
-	def MakeRequestMulti(self,callback,method,url,headers,body,auth,redirections,httpReq,info=None):
-		task=({'method':method,'url':url,'headers':headers,'body':body,'auth':auth,'redirections':redirections},httpReq,callback,info)
+	def MakeRequestMulti(self,callback,method,url,headers,body,auth,httpReq,info=None):
+		task=({'method':method,'url':url,'headers':headers,'body':body,'auth':auth},httpReq,callback,info)
 		self.__MultiQueue.put(task)
 
 	def waitMulti(self):
@@ -420,7 +417,7 @@ Attributes:
 '''
 	
 	DEFAULTCMGR=HttpCMgr()
-	COOKIEMGR=cookielib.CookieJar(cookielib.DefaultCookiePolicy())
+	COOKIEMGR=cookielib.MozillaCookieJar("cls",policy=cookielib.DefaultCookiePolicy())
 	USE_COOKIEMGR=False
 
 	def __init__(self,CMGR=None):
@@ -432,11 +429,12 @@ Attributes:
 		self.headers=httpHeaders()
 		self.response=None
 
-		self.__followLocation=2
+#		self.__followLocation=0
 		self.__timeout=None
 		self.__totaltimeout=None
 		self.__auth=None
 		self.__postdata=httpInfoBlock()
+		self.__putdata=None
 
 
 	def __getattr__ (self,name):
@@ -471,6 +469,8 @@ Attributes:
 		return self.url.netloc
 	def is_unverifiable(self):
 		return True
+	def get_type(self):
+		return self.url.scheme
 	get_origin_req_host=get_host
 
 	################################## METHODS ######################################
@@ -481,12 +481,18 @@ Attributes:
 
 	def setUrl (self, urltmp):
 		'''Set the URL you want to make the request'''
-		self.url=httpUrl(urltmp)
+		self.url=httpUrl(urltmp.replace(" ","%20"))
 
 	def setPostData(self,data):
 		'''Add Post data to the request'''
 		self.__METHOD="POST"
 		self.__postdata.makeVars(data,HttpQueryVarsFormats,"POST")
+		self.__putdata=""
+	
+	def setPutData(self,data):
+		self.__METHOD="PUT"
+		self.__putdata=data
+		self.__postdata=httpInfoBlock()
 
 	def getVars(self):
 		'''Returns all detected variables inside the request in a list of sechttp.Variable Objects'''
@@ -504,11 +510,14 @@ Attributes:
 		'''Get variable only from the body'''
 		return self.__postdata.getVars()
 
+	def getMethod(self):
+		return self.__METHOD.upper()
 
-	#----------------------------------- Location --------------------------------------#
-	def setRedirect(self,value):
-		'''Set the number on redirections to follow and avoiding an infinite loop (2 by default)'''
-		self.__followLocation=value
+
+#	#----------------------------------- Location --------------------------------------#
+#	def setRedirect(self,value):
+#		'''Set the number on redirections to follow and avoiding an infinite loop (2 by default)'''
+#		self.__followLocation=value
 
 	#----------------------------------- Auth --------------------------------------#
 	def setAuth (self,user,passwd,domain=""):
@@ -558,17 +567,35 @@ Attributes:
 			cad+="\r\n"+self.__postdata.getRaw()
 		return cad
 
-	def perform(self):
+	def perform(self,redirects=0):
 		'''Performs the request, then you can access the response through the response attribute'''
 		if globals.REQLOG:
 			self.logReq()
 		if HttpReq.USE_COOKIEMGR:
 			HttpReq.COOKIEMGR.add_cookie_header(self)
 
+		bodycontent=None
+		print self.__METHOD
 		if self.__METHOD=="POST":
 			self.headers["content-type"]="application/x-www-form-urlencoded"
+			bodycontent=self.__postdata.getRaw()
+		elif self.__METHOD=="PUT":
+			bodycontent=self.__putdata
 
-		self.CMGR.MakeRequest(self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self)
+		self.CMGR.MakeRequest(self.__METHOD,self.completeUrl,self.headers.processed(),bodycontent,self.__auth,httpReq=self)
+		rsp=self.response
+		while redirects>0:
+			redirects-=1
+			if rsp.code>=300 and rsp.code<400:
+				a=HttpReq(self.CMGR)
+				if "Authorization" in self.headers:
+					a.headers["Authorization"]=self.headers["Authorization"]
+				a.setUrl(rsp.getLocation())
+				a.perform()
+			else:
+				break
+			rsp=a.response
+		self.response=rsp
 
 	def performMulti(self,callback=None,info=None):
 		'''This function is used to perform threaded requests. You can specify a callback function callen when the connection manager finishes the request and additional info tied to the request.
@@ -584,8 +611,15 @@ Callback function header: def callbackfunc(req,resp,info,excep):
 
 		if HttpReq.USE_COOKIEMGR:
 			HttpReq.COOKIEMGR.add_cookie_header(self)
+
+		bodycontent=None
+		if self.__METHOD=="POST":
+			self.headers["content-type"]="application/x-www-form-urlencoded"
+			bodycontent=self.__postdata.getRaw()
+		elif self.__METHOD=="PUT":
+			bodycontent=self.__putdata
 		
-		self.CMGR.MakeRequestMulti(callback,self.__METHOD,self.completeUrl,self.headers.processed(),self.__postdata.getRaw(),self.__auth,redirections=self.__followLocation,httpReq=self,info=info)
+		self.CMGR.MakeRequestMulti(callback,self.__METHOD,self.completeUrl,self.headers.processed(),bodycontent,self.__auth,httpReq=self,info=info)
 
 	def addResponse(self,resp):
 		self.response=resp
@@ -758,3 +792,4 @@ class Response:
 		self.__content=par.read()
 
 		self.delHeader("Transfer-Encoding")
+

@@ -1182,8 +1182,8 @@ class Response(dict):
         # info is either an email.Message or 
         # an httplib.HTTPResponse object.
         if isinstance(info, httplib.HTTPResponse):
-            #for key, value in info.getheaders(): 
-               # self[key.lower()] = value 
+            for key, value in info.getheaders(): 
+                self[key.lower()] = value 
             self["headers"]=[(i.split(":",1)[0],i.split(":",1)[1].strip()) for i in info.msg.headers]
             self.status = info.status
             self['status'] = str(self.status)
